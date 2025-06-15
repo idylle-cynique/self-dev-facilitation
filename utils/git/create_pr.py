@@ -2,7 +2,7 @@ import os
 import subprocess
 import yaml
 
-config_path = os.path.join(os.path.dirname(__file__), 'pr_variables.yml')
+config_path = os.path.join(os.path.dirname(__file__), '../../templates/pr_variables.yml')
 with open(config_path, 'r', encoding='utf-8') as file:
     config = yaml.safe_load(file)
 
@@ -41,11 +41,15 @@ def generate_pr():
     for key, value in context.items():
         body = body.replace(f"{{{{ {key} }}}}", value)
 
-    # PRファイルを書き込む
-    with open(filename, 'w', encoding='utf-8') as pr_file:
+    # PRファイルを書き込む（outputsディレクトリに出力）
+    outputs_dir = os.path.join(os.path.dirname(__file__), '../../outputs')
+    os.makedirs(outputs_dir, exist_ok=True)
+    output_path = os.path.join(outputs_dir, filename)
+
+    with open(output_path, 'w', encoding='utf-8') as pr_file:
         pr_file.write(f"{body}")
 
-    print(f"プルリクエストファイルが作成されました: {filename}")
+    print(f"プルリクエストファイルが作成されました: {output_path}")
 
 if __name__ == "__main__":
     generate_pr()

@@ -4,7 +4,7 @@
 
 # Issue
 
-- $issue
+resolves #$issue
 
 $issue
 
