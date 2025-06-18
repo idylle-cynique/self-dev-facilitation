@@ -15,7 +15,8 @@ if [ ! -f "$md_file" ]; then
 fi
 
 # Copilotにテキストを追加する指示を出す
-prompt_file="utils/copilot/prompts/complete_pr_md.txt"
+script_dir=$(dirname "$0")
+prompt_file="$script_dir/prompts/complete_pr_md.txt"
 if [ ! -f "$prompt_file" ]; then
     echo "Prompt file not found: $prompt_file"
     exit 1
