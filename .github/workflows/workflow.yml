@@ -31,11 +31,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run pylint on templates
-      run: pylint templates/
-
-    - name: Run pylint on utils
-      run: pylint utils/
+    - name: Run pylint on all Python files
+      run: |
+        find . \( -path "./.git" -o -path "./__pycache__" -o -path "*/__pycache__" -o -path "*/venv" -o -path "*/env" -o -path "*/.venv" \) -prune -o -name "*.py" -print0 | xargs -0 -r pylint
 
     - name: Run pytest
       run: |
