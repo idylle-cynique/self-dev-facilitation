@@ -33,7 +33,7 @@ jobs:
 
     - name: Run pylint on all Python files
       run: |
-        find . -name "*.py" -not -path "./.git/*" -not -path "./__pycache__/*" -not -path "*/__pycache__/*" -not -path "*/venv/*" -not -path "*/env/*" -not -path "*/.venv/*" -print0 | xargs -0 -r pylint
+        find . \( -path "./.git" -o -path "./__pycache__" -o -path "*/__pycache__" -o -path "*/venv" -o -path "*/env" -o -path "*/.venv" \) -prune -o -name "*.py" -print0 | xargs -0 -r pylint
 
     - name: Run pytest
       run: |
