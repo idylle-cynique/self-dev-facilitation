@@ -31,11 +31,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run pylint on templates
-      run: pylint templates/
-
-    - name: Run pylint on utils
-      run: pylint utils/
+    - name: Run pylint on all Python files
+      run: |
+        if find . -name "*.py" -not -path "./.git/*" -not -path "./__pycache__/*" -not -path "*/__pycache__/*" | grep -q .; then
+          pylint $(find . -name "*.py" -not -path "./.git/*" -not -path "./__pycache__/*" -not -path "*/__pycache__/*")
+        else
+          echo "No Python files found, skipping pylint"
+        fi
 
     - name: Run pytest
       run: |
