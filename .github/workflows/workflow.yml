@@ -34,7 +34,7 @@ jobs:
     - name: Run pylint on all Python files
       run: |
         if find . -name "*.py" -not -path "./.git/*" -not -path "./__pycache__/*" -not -path "*/__pycache__/*" | grep -q .; then
-          pylint $(find . -name "*.py" -not -path "./.git/*" -not -path "./__pycache__/*" -not -path "*/__pycache__/*")
+          find . -name "*.py" -not -path "./.git/*" -not -path "./__pycache__/*" -not -path "*/__pycache__/*" -print0 | xargs -0 pylint
         else
           echo "No Python files found, skipping pylint"
         fi
