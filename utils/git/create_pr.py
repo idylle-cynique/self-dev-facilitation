@@ -1,8 +1,16 @@
-import os
 import subprocess
+from pathlib import Path
 import yaml
 
-config_path = os.path.join(os.path.dirname(__file__), '../../templates/pr_variables.yml')
+# 設定ファイルのパスを変数として定義
+TEMPLATES_DIR = './templates'
+CONFIG_FILENAME = 'pr_variables.yml'
+OUTPUTS_DIR = '../../outputs'
+
+# pathlibを使用してパスを構築
+script_dir = Path(__file__).parent
+config_path = script_dir / TEMPLATES_DIR / CONFIG_FILENAME
+
 with open(config_path, 'r', encoding='utf-8') as file:
     config = yaml.safe_load(file)
 
@@ -42,9 +50,9 @@ def generate_pr():
         body = body.replace(f"{{{{ {key} }}}}", value)
 
     # PRファイルを書き込む（outputsディレクトリに出力）
-    outputs_dir = os.path.join(os.path.dirname(__file__), '../../outputs')
-    os.makedirs(outputs_dir, exist_ok=True)
-    output_path = os.path.join(outputs_dir, filename)
+    outputs_dir = script_dir / OUTPUTS_DIR
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    output_path = outputs_dir / filename
 
     with open(output_path, 'w', encoding='utf-8') as pr_file:
         pr_file.write(f"{body}")
