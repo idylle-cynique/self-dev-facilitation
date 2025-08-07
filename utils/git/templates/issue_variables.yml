@@ -1,0 +1,38 @@
+issue:
+  reference: './outputs/issue_draft.md'
+  variables:
+    - name: next_issue_number
+      command: |
+        last_issue_number=$(gh issue list --repo "$GH_REPO" --json number --jq '.[0].number // 0' 2>/dev/null || echo 0)
+        next_number=$((last_issue_number + 1))
+        echo $next_number
+    - name: available_labels
+      command: |
+        labels=$(gh label list --repo "$GH_REPO" --json name --jq '.[].name')
+        echo "$labels" | tr '\n' ', '
+    - name: assignees
+      command: |
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        project_root="$(dirname "$(dirname "$script_dir")")"
+        assignees=$(jq -r '.["default-assignee"]' "$project_root/settings.json")
+        echo "$assignees"
+  prompts:
+    - name: issue_title_text
+      prompt: |
+        Issueのタイトル本文を入力してください (例: 新機能の実装)
+    - name: body
+      prompt: | 
+        Issueの本文を入力してください。Issueの様式についてはreferenceに指定しているdraftデータを参照し、このフォーマットに従って残りのテキストを埋めてください
+    - name: labels
+      prompt: |
+        {{ available_labels }} のうちから、今回のissueに最適と思われるラベルを1点だけつけてください
+  format:
+    - filename: issue_{{ next_issue_number }}.md
+    - title: |
+        {{ issue_title_text }}
+    - body: |
+        {{ body }}
+    - assignees: |
+        {{ assignees }}
+    - labels: |
+        {{ labels }}

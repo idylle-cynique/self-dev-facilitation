@@ -1,0 +1,35 @@
+pull_request:
+  variables:
+    - name: title
+      command: |
+        branch_name=$(git rev-parse --abbrev-ref HEAD)
+        issue_number=$(echo "$branch_name" | awk -F'/' '{print $2}')
+        title=$(gh issue view "$issue_number" --json title --jq .title)
+        echo "$title"
+    - name: issue
+      command: |
+        branch_name=$(git rev-parse --abbrev-ref HEAD)
+        issue_number=$(echo "$branch_name" | awk -F'/' '{print $2}')
+        issue="${issue_number}"
+        echo "$issue"
+    - name: commits
+      command: |
+        commits=$(git log origin/main..HEAD --date=format:"%Y-%m-%d" --pretty=format:"- **%h** %s (%an, %ad)")
+        echo "$commits"
+    - name: assignees
+      command: |
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        project_root="$(dirname "$(dirname "$script_dir")")"
+        assignees=$(jq -r '.["default-assignee"]' "$project_root/settings.json")
+        echo "$assignees"
+  filename: pr_{{ issue }}.md
+  title: |
+    {{ title }}
+  body: |
+    # Issue
+    resolves #{{ issue }}
+
+    # Summary
+
+    # Commits
+    {{ commits }}
