@@ -1,15 +1,13 @@
-# Title
+## Title
 
 - $title
 
-# Issue
+## Issue
 
-resolves #$issue
+- Resolves $issue
 
-$issue
+## Summary
 
-# Summary
-
-# Commits
+## Commits
 
 $commits
