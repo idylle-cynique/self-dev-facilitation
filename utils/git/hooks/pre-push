@@ -1,0 +1,127 @@
+# === BRANCH_RESTRICTION_HOOK_START ===
+# Pre-push hook with GitHub PR validation
+# Restrictions:
+# 1. Main branch: Always deny push
+# 2. Other branches: Deny if PR exists AND (no assignee OR assignee != self) AND (self is reviewer)
+
+check_branch_restrictions() {
+    local remote="$1"
+    local url="$2"
+
+# Configuration
+REPO_OWNER="idylle-cynique"
+REPO_NAME="self-dev-facilitation"
+GITHUB_USER="anecdotes"
+GITHUB_EMAIL="maltese_harvest@aol.com"
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to get PR info for a branch
+get_pr_info() {
+    local branch_name="$1"
+
+    # Check if gh CLI is available
+    if ! command -v gh >/dev/null 2>&1; then
+        echo -e "${YELLOW}Warning: GitHub CLI (gh) not found. Skipping PR validation.${NC}" >&2
+        return 1
+    fi
+
+    # Get PR information using GitHub CLI
+    local pr_json=$(gh pr list --head "$branch_name" --json number,assignees,reviewRequests,state --repo "$REPO_OWNER/$REPO_NAME" 2>/dev/null)
+
+    if [ -z "$pr_json" ] || [ "$pr_json" = "[]" ]; then
+        # No PR exists for this branch
+        return 1
+    fi
+
+    echo "$pr_json"
+    return 0
+}
+
+# Function to check if user is assignee
+is_self_assignee() {
+    local pr_json="$1"
+    local assignees=$(echo "$pr_json" | jq -r '.[0].assignees[]?.login // empty' 2>/dev/null)
+
+    # If no assignees, return false (not self-assigned)
+    if [ -z "$assignees" ]; then
+        return 1
+    fi
+
+    # Check if current user is in assignees
+    echo "$assignees" | grep -q "^$GITHUB_USER$"
+}
+
+# Function to check if user is reviewer
+is_self_reviewer() {
+    local pr_json="$1"
+    local reviewers=$(echo "$pr_json" | jq -r '.[0].reviewRequests[]?.requestedReviewer?.login // empty' 2>/dev/null)
+
+    # Check if current user is in requested reviewers
+    echo "$reviewers" | grep -q "^$GITHUB_USER$"
+}
+
+# Main validation logic
+while read local_ref local_oid remote_ref remote_oid; do
+    # Skip if deleting branch
+    if [ "$local_oid" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    # Get branch name
+    branch_name=$(echo "$remote_ref" | sed 's|refs/heads/||')
+
+    echo "Checking push to branch: $branch_name" >&2
+
+    # Rule 1: Always deny push to main branch
+    if [ "$branch_name" = "main" ]; then
+        echo -e "${RED}Error: Direct push to main branch is not allowed${NC}" >&2
+        echo -e "${RED}Please create a pull request instead${NC}" >&2
+        exit 1
+    fi
+
+    # Rule 2: For other branches, check PR conditions
+    pr_json=$(get_pr_info "$branch_name")
+
+    if [ $? -eq 0 ]; then
+        # PR exists for this branch
+        echo "PR found for branch $branch_name, validating conditions..." >&2
+
+        # Check condition: Assignee is not self or doesn't exist
+        assignee_valid=false
+        if is_self_assignee "$pr_json"; then
+            assignee_valid=true
+            echo "✓ Assignee check passed: You are assigned to this PR" >&2
+        else
+            echo "✗ Assignee check failed: You are not assigned to this PR (or no assignee set)" >&2
+        fi
+
+        # Check condition: Self is reviewer
+        self_is_reviewer=false
+        if is_self_reviewer "$pr_json"; then
+            self_is_reviewer=true
+            echo "✗ Reviewer check failed: You are assigned as reviewer" >&2
+        else
+            echo "✓ Reviewer check passed: You are not assigned as reviewer" >&2
+        fi
+
+        # Apply restriction logic:
+        # Block if: (assignee != self OR no assignee) AND (self is reviewer)
+        if [ "$assignee_valid" = false ] && [ "$self_is_reviewer" = true ]; then
+            echo -e "${RED}Error: Push blocked due to PR validation rules:${NC}" >&2
+            echo -e "${RED}  - You are not assigned to this PR AND you are a requested reviewer${NC}" >&2
+            echo -e "${RED}  - Either assign yourself to the PR or remove yourself as reviewer${NC}" >&2
+            exit 1
+        fi
+
+        echo "✓ PR validation passed for branch $branch_name" >&2
+    else
+        echo "No PR found for branch $branch_name, allowing push" >&2
+    fi
+done
+
+echo "✓ All pre-push validations passed" >&2
+exit 0
