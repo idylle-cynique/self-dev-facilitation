@@ -8,11 +8,11 @@ check_branch_restrictions() {
     local remote="$1"
     local url="$2"
 
-# Configuration
-REPO_OWNER="idylle-cynique"
-REPO_NAME="self-dev-facilitation"
-GITHUB_USER="idylle-cynique"
-GITHUB_EMAIL="maltese_harvest@aol.com"
+# Configuration (prefer environment variables, fallback to git config or remote URL)
+REPO_OWNER="${REPO_OWNER:-$(git config --get remote.origin.url | sed -n 's#.*github.com[:/]\([^/]*\)/.*#\1#p')}"
+REPO_NAME="${REPO_NAME:-$(git config --get remote.origin.url | sed -n 's#.*github.com[:/][^/]*/\([^/.]*\).*#\1#p')}"
+GITHUB_USER="${GITHUB_USER:-$(git config --get user.name)}"
+GITHUB_EMAIL="${GITHUB_EMAIL:-$(git config --get user.email)}"
 
 # Colors for output
 RED='\033[0;31m'
