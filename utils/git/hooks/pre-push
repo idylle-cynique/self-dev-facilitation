@@ -2,7 +2,7 @@
 # Pre-push hook with GitHub PR validation
 # Restrictions:
 # 1. Main branch: Always deny push
-# 2. Other branches: Deny if PR exists AND (no assignee OR assignee != self) AND (self is reviewer)
+# 2. Other branches: Deny if PR exists AND ((no assignee OR assignee != self) OR (self is reviewer))
 
 check_branch_restrictions() {
     local remote="$1"
@@ -109,11 +109,17 @@ while read local_ref local_oid remote_ref remote_oid; do
         fi
 
         # Apply restriction logic:
-        # Block if: (assignee != self OR no assignee) AND (self is reviewer)
-        if [ "$assignee_valid" = false ] && [ "$self_is_reviewer" = true ]; then
+        # Block if: (assignee != self OR no assignee) OR (self is reviewer)
+        if [ "$assignee_valid" = false ] || [ "$self_is_reviewer" = true ]; then
             echo -e "${RED}Error: Push blocked due to PR validation rules:${NC}" >&2
-            echo -e "${RED}  - You are not assigned to this PR AND you are a requested reviewer${NC}" >&2
-            echo -e "${RED}  - Either assign yourself to the PR or remove yourself as reviewer${NC}" >&2
+            if [ "$assignee_valid" = false ] && [ "$self_is_reviewer" = true ]; then
+                echo -e "${RED}  - You are not assigned to this PR AND you are a requested reviewer${NC}" >&2
+            elif [ "$assignee_valid" = false ]; then
+                echo -e "${RED}  - You are not assigned to this PR${NC}" >&2
+            else
+                echo -e "${RED}  - You are assigned as reviewer${NC}" >&2
+            fi
+            echo -e "${RED}  - Please assign yourself to the PR or remove yourself as reviewer${NC}" >&2
             exit 1
         fi
 
