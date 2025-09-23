@@ -11,7 +11,7 @@ check_branch_restrictions() {
 # Configuration
 REPO_OWNER="idylle-cynique"
 REPO_NAME="self-dev-facilitation"
-GITHUB_USER="anecdotes"
+GITHUB_USER="idylle-cynique"
 GITHUB_EMAIL="maltese_harvest@aol.com"
 
 # Colors for output
