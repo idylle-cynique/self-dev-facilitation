@@ -14,8 +14,9 @@ if [ -f "$SCRIPT_DIR/hooks/pre-push" ]; then
     # Backup existing hook if it exists
     if [ -f "$HOOKS_DIR/pre-push" ]; then
         echo "⚠ Existing pre-push hook found"
-        cp "$HOOKS_DIR/pre-push" "$HOOKS_DIR/pre-push.backup.$(date +%Y%m%d_%H%M%S)"
-        echo "✓ Backed up to pre-push.backup.$(date +%Y%m%d_%H%M%S)"
+        TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+        cp "$HOOKS_DIR/pre-push" "$HOOKS_DIR/pre-push.backup.$TIMESTAMP"
+        echo "✓ Backed up to pre-push.backup.$TIMESTAMP"
     fi
 
     cp "$SCRIPT_DIR/hooks/pre-push" "$HOOKS_DIR/pre-push"
