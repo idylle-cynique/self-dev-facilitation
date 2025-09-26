@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # === BRANCH_RESTRICTION_HOOK_START ===
 # Pre-push hook with GitHub PR validation
 # Restrictions:
@@ -65,6 +67,13 @@ is_self_reviewer() {
 }
 
 # Main validation logic
+# The following loop reads ref update information from stdin as provided by Git during a pre-push hook.
+# Expected input: <local ref> <local sha1> <remote ref> <remote sha1> (one per line)
+if [ -t 0 ]; then
+    printf "${RED}エラー: 標準入力が検出されませんでした。このスクリプトはGit pre-pushフックとして実行される必要があります。${NC}\n" >&2
+    exit 2
+fi
+
 while read local_ref local_oid remote_ref remote_oid; do
     # Skip if deleting branch
     if [ "$local_oid" = "0000000000000000000000000000000000000000" ]; then
