@@ -27,9 +27,11 @@ pull_request:
     {{ title }}
   body: |
     # Issue
-    resolves #{{ issue }}
+
+    - Resolves #{{ issue }}
 
     # Summary
 
     # Commits
+
     {{ commits }}
