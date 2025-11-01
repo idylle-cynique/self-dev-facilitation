@@ -66,6 +66,27 @@ is_self_reviewer() {
     echo "$reviewers" | grep -q "^$GITHUB_USER$"
 }
 
+# Function to check if push is a force-push (commit history modification)
+# Returns: 0 (true) if force-push detected, 1 (false) otherwise
+is_force_push() {
+    local local_oid="$1"
+    local remote_oid="$2"
+
+    # New branch - not a force-push
+    if [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
+        echo "New branch detected, skipping force-push check" >&2
+        return 1  # false - not a force-push
+    fi
+
+    # Check if remote_oid is an ancestor of local_oid
+    # If not, history has been rewritten (force-push)
+    if ! git merge-base --is-ancestor "$remote_oid" "$local_oid" 2>/dev/null; then
+        return 0  # true - force-push detected
+    fi
+
+    return 1  # false - not a force-push
+}
+
 # Main validation logic
 # The following loop reads ref update information from stdin as provided by Git during a pre-push hook.
 # Expected input: <local ref> <local sha1> <remote ref> <remote sha1> (one per line)
@@ -84,6 +105,14 @@ while read local_ref local_oid remote_ref remote_oid; do
     branch_name=$(echo "$remote_ref" | sed 's|refs/heads/||')
 
     echo "Checking push to branch: $branch_name" >&2
+
+    # Detect force-push (commit history modification)
+    force_push_detected=false
+    if is_force_push "$local_oid" "$remote_oid"; then
+        force_push_detected=true
+        echo -e "${YELLOW}Warning: Force-push detected (commit history will be modified)${NC}" >&2
+        echo -e "${YELLOW}Remote commit $remote_oid is not an ancestor of local commit $local_oid${NC}" >&2
+    fi
 
     # Rule 1: Always deny push to main branch
     if [ "$branch_name" = "main" ]; then
