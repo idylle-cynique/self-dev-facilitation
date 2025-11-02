@@ -66,6 +66,38 @@ is_self_reviewer() {
     echo "$reviewers" | grep -q "^$GITHUB_USER$"
 }
 
+# Function to get child branches (PRs that use current branch as base)
+# Returns:
+#   0: Child branches found (outputs PR list)
+#   1: No child branches found
+#   2: Required commands (gh/jq) not available
+get_child_branches() {
+    local branch_name="$1"
+
+    # Check if gh CLI is available
+    if ! command -v gh >/dev/null 2>&1; then
+        echo "ERROR:gh_not_found" >&2
+        return 2
+    fi
+
+    # Check if jq is available
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "ERROR:jq_not_found" >&2
+        return 2
+    fi
+
+    # Get all open PRs with base branch matching current branch
+    local child_prs=$(gh pr list --state open --json number,headRefName,baseRefName --repo "$REPO_OWNER/$REPO_NAME" 2>/dev/null | \
+        jq -r --arg base "$branch_name" '.[] | select(.baseRefName == $base) | "\(.number):\(.headRefName)"')
+
+    if [ -z "$child_prs" ]; then
+        return 1  # No child branches found
+    fi
+
+    echo "$child_prs"
+    return 0  # Child branches found
+}
+
 # Function to check if push is a force-push (commit history modification)
 # Returns: 0 (true) if force-push detected, 1 (false) otherwise
 is_force_push() {
@@ -112,6 +144,36 @@ while read local_ref local_oid remote_ref remote_oid; do
         force_push_detected=true
         echo -e "${YELLOW}Warning: Force-push detected (commit history will be modified)${NC}" >&2
         echo -e "${YELLOW}Remote commit $remote_oid is not an ancestor of local commit $local_oid${NC}" >&2
+    fi
+
+    # If force-push detected, check for child branches
+    if [ "$force_push_detected" = true ]; then
+        echo "Force-push detected. Checking for child branches..." >&2
+
+        child_branches=$(get_child_branches "$branch_name")
+        check_result=$?
+
+        # Case 1: Child branches found (return code 0)
+        if [ $check_result -eq 0 ]; then
+            echo -e "${RED}Error: Cannot force-push - child branches detected!${NC}" >&2
+            echo -e "${RED}The following PRs are based on '$branch_name':${NC}" >&2
+            echo "$child_branches" | while IFS=: read -r pr_num branch; do
+                echo -e "${RED}  - PR #$pr_num: $branch${NC}" >&2
+            done
+            echo -e "${RED}Force-pushing would break these child branches.${NC}" >&2
+            echo -e "${YELLOW}Please rebase child branches first, or use regular push.${NC}" >&2
+            exit 1
+        # Case 2: Command not available (return code 2)
+        elif [ $check_result -eq 2 ]; then
+            echo -e "${RED}Error: Cannot verify child branches - required commands not available${NC}" >&2
+            echo -e "${RED}Force-push is blocked for safety reasons.${NC}" >&2
+            echo -e "${YELLOW}Please install 'gh' (GitHub CLI) and 'jq' to enable force-push with child branch detection.${NC}" >&2
+            echo -e "${YELLOW}Or contact your team lead if you need to force-push urgently.${NC}" >&2
+            exit 1
+        # Case 3: No child branches (return code 1)
+        else
+            echo "No child branches detected. Force-push allowed." >&2
+        fi
     fi
 
     # Rule 1: Always deny push to main branch
@@ -169,3 +231,9 @@ done
 
 echo "✓ All pre-push validations passed" >&2
 exit 0
+
+}
+# === BRANCH_RESTRICTION_HOOK_END ===
+
+# Call the main function
+check_branch_restrictions "$@"
