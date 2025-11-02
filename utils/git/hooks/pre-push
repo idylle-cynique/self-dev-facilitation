@@ -4,11 +4,8 @@
 # Pre-push hook with GitHub PR validation
 # Restrictions:
 # 1. Main branch: Always deny push
-# 2. Other branches: Deny if PR exists AND ((no assignee OR assignee != self) OR (self is reviewer))
-
-check_branch_restrictions() {
-    local remote="$1"
-    local url="$2"
+# 2. Force-push: Deny if child branches exist or required commands unavailable
+# 3. Other branches: Deny if PR exists AND ((no assignee OR assignee != self) OR (self is reviewer))
 
 # Configuration (prefer environment variables, fallback to git config or remote URL)
 REPO_OWNER="${REPO_OWNER:-$(git config --get remote.origin.url | sed -n 's#.*github.com[:/]\([^/]*\)/.*#\1#p')}"
@@ -231,9 +228,4 @@ done
 
 echo "✓ All pre-push validations passed" >&2
 exit 0
-
-}
 # === BRANCH_RESTRICTION_HOOK_END ===
-
-# Call the main function
-check_branch_restrictions "$@"
